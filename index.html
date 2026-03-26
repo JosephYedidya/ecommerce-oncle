@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boutique Oncle - E-commerce</title>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; 
+    }
+    .glass { 
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body class="p-6">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <header class="text-center mb-8 glass rounded-3xl p-8 shadow-2xl">
+      <h1 class="text-5xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-4">
+        🛒 Boutique Oncle
+      </h1>
+      <p class="text-xl text-gray-600">Gestion Stocks & Ventes</p>
+      <button id="addProductBtn" class="mt-6 bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+        ➕ Ajouter Produit
+      </button>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Products List -->
+      <section class="lg:col-span-2 glass rounded-3xl p-8 shadow-2xl">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-4 border-indigo-500 pb-4">📦 Catalogue Produits</h2>
+        <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="productsLoading" class="text-center py-8 hidden">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+        </div>
+      </section>
+
+      <!-- Sale Form -->
+      <section id="saleSection" class="glass rounded-3xl p-8 shadow-2xl hidden">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-4 border-green-500 pb-4">💰 Enregistrer Vente</h2>
+        <div id="saleFormContainer"></div>
+      </section>
+
+      <!-- Add Product Form -->
+      <section id="addSection" class="glass rounded-3xl p-8 shadow-2xl hidden">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-4 border-blue-500 pb-4">➕ Nouveau Produit</h2>
+        <form id="addProductForm" class="space-y-6">
+          <div>
+            <label class="block text-lg font-semibold text-gray-700 mb-2">Nom du produit</label>
+            <input type="text" id="productName" required class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+          </div>
+          <div>
+            <label class="block text-lg font-semibold text-gray-700 mb-2">Prix (€)</label>
+            <input type="number" step="0.01" id="productPrice" required class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+          </div>
+          <div>
+            <label class="block text-lg font-semibold text-gray-700 mb-2">Quantité</label>
+            <input type="number" id="productQuantity" required class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
+          </div>
+          <div class="flex gap-4 pt-4">
+            <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+              Ajouter Produit
+            </button>
+            <button type="button" id="cancelAddBtn" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+              Annuler
+            </button>
+          </div>
+        </form>
+        <div id="addMessage" class="mt-4 p-4 rounded-xl hidden"></div>
+      </section>
+    </div>
+
+    <!-- Sales Log -->
+    <section class="mt-12 glass rounded-3xl p-8 shadow-2xl">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-4 border-purple-500 pb-4">📋 Historique Ventes</h2>
+      <div id="salesLog" class="space-y-3 max-h-96 overflow-y-auto"></div>
+    </section>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:5000/api';
+    let selectedProduct = null;
+    let products = [];
+
+    // Load products
+    async function loadProducts() {
+      document.getElementById('productsLoading').classList.remove('hidden');
+      try {
+        const response = await axios.get(`${API_BASE}/products`);
+        products = response.data;
+        renderProducts();
+        loadSales();
+      } catch (error) {
+        console.error('Erreur chargement:', error);
+        alert('Erreur connexion backend');
+      } finally {
+        document.getElementById('productsLoading').classList.add('hidden');
+      }
+    }
+
+    // Render products
+    function renderProducts() {
+      const grid = document.getElementById('productsGrid');
+      grid.innerHTML = '';
+      products.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'glass p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border-2 hover:border-indigo-300';
+        card.onclick = () => selectProduct(product);
+        card.innerHTML = `
+          <h3 class="text-2xl font-bold text-gray-800 mb-3">${product.name}</h3>
+          <div class="text-3xl font-bold text-green-600 mb-4">€${product.price.toFixed(2)}</div>
+          <div class="text-lg mb-4">
+            <span class="font-semibold">Stock:</span> 
+            <span class="ml-2 px-3 py-1 rounded-full ${product.quantity > 5 ? 'bg-green-100 text-green-800' : product.quantity > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+              ${product.quantity}
+            </span>
+          </div>
+          <button class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 ${product.quantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}">
+            ${product.quantity > 0 ? 'Sélectionner pour vente' : 'Rupture de stock'}
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Select product for sale
+    function selectProduct(product) {
+      if (product.quantity === 0) return;
+      selectedProduct = product;
+      showSaleForm();
+    }
+
+    // Show sale form
+    function showSaleForm() {
+      document.getElementById('saleSection').classList.remove('hidden');
+      renderSaleForm();
+    }
+
+    // Render sale form
+    function renderSaleForm() {
+      const container = document.getElementById('saleFormContainer');
+      container.innerHTML = `
+        <div class="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl mb-6">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">${selectedProduct.name}</h3>
+          <div class="text-3xl font-bold text-green-600 mb-2">€${selectedProduct.price.toFixed(2)}</div>
+          <div class="text-xl">Stock disponible: ${selectedProduct.quantity}</div>
+        </div>
+        <form id="saleForm">
+          <div class="mb-6">
+            <label class="block text-lg font-semibold text-gray-700 mb-3">Quantité</label>
+            <input type="number" id="saleQuantity" min="1" max="${selectedProduct.quantity}" value="1" required 
+                   class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all text-lg">
+          </div>
+          <div class="mb-6">
+            <label class="block text-lg font-semibold text-gray-700 mb-3">Caissière (nom/email)</label>
+            <input type="text" id="soldBy" placeholder="Marie Dupont / marie@boutique.fr" required
+                   class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all">
+          </div>
+          <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl text-lg transition-all duration-300">
+            💰 Enregistrer Vente
+          </button>
+        </form>
+        <button id="cancelSaleBtn" class="w-full mt-4 bg-gray-500 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+          Annuler
+        </button>
+        <div id="saleMessage" class="mt-6 p-4 rounded-xl hidden"></div>
+      `;
+      
+      document.getElementById('saleForm').onsubmit = handleSale;
+      document.getElementById('cancelSaleBtn').onclick = hideSaleForm;
+    }
+
+    // Handle sale
+    async function handleSale(e) {
+      e.preventDefault();
+      const quantity = parseInt(document.getElementById('saleQuantity').value);
+      const soldBy = document.getElementById('soldBy').value;
+      
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement...';
+      
+      try {
+        await axios.post(`${API_BASE}/sales`, { productId: selectedProduct._id, quantity, soldBy });
+        showMessage('saleMessage', '✅ Vente enregistrée avec succès!', 'bg-green-100 text-green-800');
+        loadProducts();
+        hideSaleForm();
+      } catch (error) {
+        showMessage('saleMessage', `❌ Erreur: ${error.response?.data?.error || 'Vente impossible'}`, 'bg-red-100 text-red-800');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💰 Enregistrer Vente';
+      }
+    }
+
+    // Add product
+    document.getElementById('addProductForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const formData = {
+        name: document.getElementById('productName').value,
+        price: parseFloat(document.getElementById('productPrice').value),
+        quantity: parseInt(document.getElementById('productQuantity').value)
+      };
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = 'Ajout...';
+
+      try {
+        await axios.post(`${API_BASE}/products`, formData);
+        showMessage('addMessage', '✅ Produit ajouté avec succès!', 'bg-green-100 text-green-800');
+        loadProducts();
+        hideAddForm();
+      } catch (error) {
+        showMessage('addMessage', `❌ Erreur: ${error.response?.data?.error || 'Ajout impossible'}`, 'bg-red-100 text-red-800');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Ajouter Produit';
+      }
+    };
+
+    // Load sales
+    async function loadSales() {
+      try {
+        const response = await axios.get(`${API_BASE}/sales`);
+        renderSales(response.data);
+      } catch (error) {
+        console.error('Erreur sales:', error);
+      }
+    }
+
+    // Render sales
+    function renderSales(sales) {
+      const log = document.getElementById('salesLog');
+      log.innerHTML = sales.slice(-10).map(sale => `
+        <div class="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border-l-4 border-purple-500">
+          <div>
+            <div class="font-bold text-lg">${sale.productId.name}</div>
+            <div class="text-sm text-gray-500">${sale.quantity} × €${sale.productId.price.toFixed(2)} = €${(sale.quantity * sale.productId.price).toFixed(2)}</div>
+          </div>
+          <div class="text-right">
+            <div class="font-semibold text-purple-600">${sale.soldBy}</div>
+            <div class="text-sm text-gray-500">${new Date(sale.date).toLocaleString('fr-FR')}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // UI Controls
+    document.getElementById('addProductBtn').onclick = showAddForm;
+    document.getElementById('cancelAddBtn').onclick = hideAddForm;
+
+    function showAddForm() {
+      document.getElementById('addSection').classList.remove('hidden');
+    }
+
+    function hideAddForm() {
+      document.getElementById('addSection').classList.add('hidden');
+      document.getElementById('addProductForm').reset();
+      document.getElementById('addMessage').classList.add('hidden');
+    }
+
+    function hideSaleForm() {
+      document.getElementById('saleSection').classList.add('hidden');
+      selectedProduct = null;
+    }
+
+    function showMessage(elementId, text, classes) {
+      const el = document.getElementById(elementId);
+      el.textContent = text;
+      el.className = `p-4 rounded-xl font-semibold ${classes}`;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+
+    // Init
+    loadProducts();
+    setInterval(loadSales, 10000); // Refresh sales every 10s
+  </script>
+</body>
+</html>
+
