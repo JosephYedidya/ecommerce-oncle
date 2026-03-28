@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 
 const saleSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  variantType: { type: String, required: true },
   quantity: { type: Number, required: true },
-  soldBy: { type: String, required: true }, // email ou nom de la caissière
+  soldBy: { type: String, required: true },
   date: { type: Date, default: Date.now }
 });
 
