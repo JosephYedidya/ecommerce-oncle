@@ -1,10 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(require('cors')());
+app.use(cors());
 
 // Connexion MongoDB
 mongoose.connect(process.env.MONGODB_URL)
@@ -18,7 +19,8 @@ app.get('/', (req, res) => {
 
 app.use('/api/products', require('./routes/products'));
 app.use('/api/sales', require('./routes/sales'));
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur sur port ${PORT}`);
 });
