@@ -18,6 +18,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/products', require('./routes/products'));
 app.use('/api/sales', require('./routes/sales'));
-app.listen(process.env.PORT, () => {
-  console.log(`🚀 Serveur sur http://localhost:${process.env.PORT}`);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur sur port ${PORT}`);
 });
