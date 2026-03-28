@@ -140,7 +140,7 @@ export default function AdminDashboard() {
             {variants.map((variant, index) => (
               <Space key={index} style={{ marginBottom: 12, width: '100%', gap: 12 }}>
                 <Input
-                  placeholder="Type (ex: Fer de 10, Fer de 12...)"
+                  placeholder="Type (Les differents types de produits)"
                   value={variant.type}
                   onChange={(e) => handleVariantChange(index, 'type', e.target.value)}
                   style={{ width: 240, borderRadius: 6 }}
