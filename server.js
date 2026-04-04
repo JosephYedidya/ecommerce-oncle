@@ -4,8 +4,20 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://ecommerce-oncle-frontend.vercel.app',
+    'https://ecommerce-oncle-frontend-*.vercel.app'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true
+}));
+
 app.use(express.json());
-app.use(cors());
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -26,7 +38,7 @@ app.get('/', (req, res) => {
 app.use('/api/products', require('./routes/products'));
 app.use('/api/sales', require('./routes/sales'));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Serveur sur port ${PORT}`);
 });
